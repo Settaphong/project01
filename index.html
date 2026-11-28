@@ -2,169 +2,1240 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>FuelLog TH - บันทึกการเติมน้ำมัน</title>
-    <script src="https://tailwindcss.com"></script>
-    <link href="https://googleapis.com" rel="stylesheet">
-    <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #f3f4f6; }
-    </style>
-</head>
-<body class="text-gray-800 pb-12">
-
-    <!-- Header -->
-    <header class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-lg sticky top-0 z-10">
-        <div class="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <span class="text-2xl">⛽</span>
-                <div>
-                    <h1 class="text-xl font-bold tracking-wide">FuelLog TH</h1>
-                    <p class="text-xs text-blue-200">สมุดบันทึกการเติมน้ำมัน & คำนวณอัตราสิ้นเปลือง</p>
-                </div>
-            </div>
-            <button onclick="exportCSV()" class="bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-2 rounded-lg transition flex items-center gap-1">
-                <span>📥</span> Export CSV
-            </button>
-        </div>
-    </header>
-
-    <main class="max-w-3xl mx-auto px-4 mt-6 space-y-6">
-
-        <!-- Dashboard Summary -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <p class="text-xs text-gray-500">อัตราสิ้นเปลืองเฉลี่ย</p>
-                <p class="text-xl font-bold text-emerald-600 mt-1" id="avgConsumption">0.00 <span class="text-xs font-normal text-gray-500">กม./ลิตร</span></p>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <p class="text-xs text-gray-500">ค่าใช้จ่ายเฉลี่ย</p>
-                <p class="text-xl font-bold text-blue-600 mt-1" id="avgCostPerKm">0.00 <span class="text-xs font-normal text-gray-500">บาท/กม.</span></p>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <p class="text-xs text-gray-500">ค่าน้ำมันรวมทั้งหมด</p>
-                <p class="text-xl font-bold text-gray-800 mt-1" id="totalSpent">0 <span class="text-xs font-normal text-gray-500">บาท</span></p>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <p class="text-xs text-gray-500">ระยะทางที่บันทึก</p>
-                <p class="text-xl font-bold text-indigo-600 mt-1" id="totalDistance">0 <span class="text-xs font-normal text-gray-500">กม.</span></p>
-            </div>
-        </div>
-
-        <!-- Add Fuel Form -->
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-            <h2 class="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <span>➕</span> บันทึกการเติมน้ำมันครั้งใหม่
-            </h2>
-            <form id="fuelForm" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">วันที่เติม</label>
-                        <input type="date" id="date" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">เลขไมล์ปัจจุบัน (Odometer - กม.)</label>
-                        <input type="number" step="0.1" id="odometer" placeholder="เช่น 45200" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">ปั๊มน้ำมัน</label>
-                        <select id="station" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm bg-white">
-                            <option value="PTT (ปตท.)">PTT (ปตท.)</option>
-                            <option value="Bangchak (บางจาก)">Bangchak (บางจาก)</option>
-                            <option value="Shell (เชลล์)">Shell (เชลล์)</option>
-                            <option value="PT (พีที)">PT (พีที)</option>
-                            <option value="Caltex (คาลเท็กซ์)">Caltex (คาลเท็กซ์)</option>
-                            <option value="Esso/Bangchak">Esso (เอสโซ่)</option>
-                            <option value="อื่นๆ">อื่นๆ</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">ประเภทน้ำมัน</label>
-                        <select id="fuelType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm bg-white">
-                            <option value="แก๊สโซฮอล์ 95">แก๊สโซฮอล์ 95</option>
-                            <option value="แก๊สโซฮอล์ 91">แก๊สโซฮอล์ 91</option>
-                            <option value="E20">E20</option>
-                            <option value="ดีเซล B7">ดีเซล B7</option>
-                            <option value="ดีเซลพรีเมียม">ดีเซลพรีเมียม</option>
-                            <option value="เบนซิน 95">เบนซิน 95</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">ราคา/ลิตร (บาท)</label>
-                        <input type="number" step="0.01" id="pricePerLiter" placeholder="38.55" required oninput="calcTotal('price')" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">จำนวนลิตร</label>
-                        <input type="number" step="0.001" id="liters" placeholder="25.94" required oninput="calcTotal('liters')" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center pt-2">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">ยอดเงินรวม (บาท)</label>
-                        <input type="number" step="0.01" id="totalCost" placeholder="1000" required oninput="calcTotal('total')" class="w-full px-3 py-2 bg-blue-50 border border-blue-200 text-blue-900 font-semibold rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
-                    </div>
-                    <div class="flex items-center space-x-2 pt-4">
-                        <input type="checkbox" id="fullTank" checked class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                        <label for="fullTank" class="text-sm text-gray-700">เติมเต็มถัง (ใช้คำนวณ กม./ลิตร ได้แม่นยำ)</label>
-                    </div>
-                </div>
-
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl shadow transition duration-200">
-                    บันทึกข้อมูล
-                </button>
-            </form>
-        </div>
-
-        <!-- History List -->
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-base font-semibold text-gray-800 flex items-center gap-2">
-                    <span>📋</span> ประวัติการเติมน้ำมัน
-                </h2>
-                <button onclick="clearAllData()" class="text-xs text-red-500 hover:underline">ล้างข้อมูลทั้งหมด</button>
-            </div>
-            
-            <div id="logList" class="space-y-3">
-                <!-- Items will be injected here -->
-            </div>
-        </div>
-
-    </main>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Prompt & Sarabun สำหรับภาษาไทยที่อ่านง่าย สบายตา -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons สำหรับไอคอนที่คมชัด ทันสมัย -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
     <script>
-        // Set default date to today
-        document.getElementById('date').valueAsDate = new Date();
-
-        // Load logs from LocalStorage
-        let logs = JSON.parse(localStorage.getItem('fuelLogsTH')) || [];
-
-        // Auto calculate fields
-        function calcTotal(changedField) {
-            const price = parseFloat(document.getElementById('pricePerLiter').value);
-            const liters = parseFloat(document.getElementById('liters').value);
-            const total = parseFloat(document.getElementById('totalCost').value);
-
-            if (changedField === 'price' || changedField === 'liters') {
-                if (!isNaN(price) && !isNaN(liters)) {
-                    document.getElementById('totalCost').value = (price * liters).toFixed(2);
-                }
-            } else if (changedField === 'total') {
-                if (!isNaN(total) && !isNaN(price) && price > 0) {
-                    document.getElementById('liters').value = (total / price).toFixed(3);
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            900: '#134e4a',
+                        }
+                    }
                 }
             }
         }
+    </script>
 
-        // Form Submit
-        document.getElementById('fuelForm').addEventListener('submit', function(e) {
+    <style>
+        /* ปรับแต่งเพิ่มเติมสำหรับ iOS และความนุ่มนวล */
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #f4f7f6;
+            color: #1e293b;
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: env(safe-area-inset-bottom, 24px);
+        }
+        
+        /* ซ่อน Scrollbar แต่ยังเลื่อนได้ */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* แอนิเมชันเปิด Modal แบบ iOS Bottom Sheet */
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0.5; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up {
+            animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-brand-100 selection:text-brand-900">
+
+    <!-- Container หลัก ขนาดพอดีจอมือถือและดูดีบนแท็บเล็ต/คอม -->
+    <div class="max-w-md mx-auto min-h-screen flex flex-col relative pb-28">
+        
+        <!-- Header ด้านบน -->
+        <header class="px-5 pt-6 pb-3 flex justify-between items-center bg-[#f4f7f6]/90 backdrop-blur-md sticky top-0 z-20">
+            <div>
+                <div class="flex items-center gap-2 text-brand-700 font-bold text-xl">
+                    <i class="ph-fill ph-gas-pump text-2xl text-brand-600"></i>
+                    <span>สมุดเติมน้ำมัน</span>
+                </div>
+                <div class="flex items-center gap-2 mt-0.5">
+                    <p id="currentMonthLabel" class="text-sm text-slate-500">ข้อมูลประจำเดือน...</p>
+                    <!-- แสดงสถานะการเชื่อมต่อ Google Sheet -->
+                    <span id="syncStatusBadge" onclick="openSyncModal()" class="cursor-pointer inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-600 transition">
+                        <span id="syncStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        <span id="syncStatusText">ในเครื่อง</span>
+                    </span>
+                </div>
+            </div>
+            <div class="flex items-center gap-1">
+                <button onclick="openSyncModal()" class="p-2.5 text-brand-600 hover:bg-brand-50 rounded-full transition relative" title="เชื่อมต่อ Google Sheets">
+                    <i class="ph-bold ph-cloud-arrow-up text-xl"></i>
+                </button>
+                <button onclick="openResetModal()" class="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-full transition" title="รีเซ็ตข้อมูลตัวอย่าง">
+                    <i class="ph ph-arrows-clockwise text-xl"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="px-5 space-y-5 flex-1">
+            
+            <!-- 1. การ์ดสรุปยอดค่าน้ำมันเดือนนี้ (ตัวใหญ่ ชัดเจน) -->
+            <section class="bg-gradient-to-br from-brand-600 to-teal-700 rounded-3xl p-6 text-white shadow-lg shadow-teal-900/10 relative overflow-hidden">
+                <!-- ลวดลายตกแต่งพื้นหลังเบาๆ -->
+                <div class="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+                <div class="absolute -left-6 -bottom-8 w-28 h-28 bg-teal-400/20 rounded-full blur-lg pointer-events-none"></div>
+
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between">
+                        <span class="text-teal-100 text-base font-medium">ค่าน้ำมันเดือนนี้</span>
+                        <span id="fillCountBadge" class="bg-white/20 text-white text-xs font-medium px-3 py-1 rounded-full backdrop-blur-sm">
+                            0 ครั้ง
+                        </span>
+                    </div>
+
+                    <!-- ตัวเลขยอดเงินใหญ่พิเศษ -->
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <span id="thisMonthTotal" class="text-5xl font-bold tracking-tight">0</span>
+                        <span class="text-xl text-teal-100 font-medium">บาท</span>
+                    </div>
+
+                    <!-- เปรียบเทียบกับเดือนก่อน -->
+                    <div id="comparisonBox" class="mt-4 pt-3.5 border-t border-white/15 flex items-center gap-2 text-sm">
+                        <span id="comparisonIcon" class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                            <i class="ph-bold ph-minus"></i>
+                        </span>
+                        <span id="comparisonText" class="text-teal-50 leading-snug">กำลังคำนวณ...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. สถิติภาพรวม & กราฟแท่งเปรียบเทียบรายเดือน -->
+            <section class="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="ph-duotone ph-chart-bar text-brand-600 text-xl"></i>
+                        สรุปแต่ละเดือน
+                    </h2>
+                    <!-- ค่าเฉลี่ย กม./ลิตร รวมทั้งหมด -->
+                    <div class="text-right">
+                        <span class="text-xs text-slate-400 block">ประหยัดเฉลี่ยรวม</span>
+                        <span id="overallAvgKmL" class="text-base font-bold text-brand-600">- กม./ลิตร</span>
+                    </div>
+                </div>
+
+                <!-- กราฟแท่งค่าน้ำมันและอัตราสิ้นเปลืองรายเดือน -->
+                <div id="monthlyChartContainer" class="space-y-4">
+                    <!-- สร้างด้วย JS -->
+                </div>
+            </section>
+
+            <!-- 3. รายการประวัติการเติมน้ำมัน -->
+            <section>
+                <div class="flex items-center justify-between mb-3 px-1">
+                    <h2 class="text-lg font-bold text-slate-800">ประวัติการเติมน้ำมัน</h2>
+                    <span class="text-xs text-slate-400">แตะเพื่อแก้ไข หรือลบ</span>
+                </div>
+
+                <div id="recordsList" class="space-y-3.5">
+                    <!-- สร้างรายการด้วย JS -->
+                </div>
+            </section>
+
+        </main>
+
+        <!-- ปุ่มลอยด้านล่างสำหรับกดเติมน้ำมัน (กดง่ายด้วยนิ้วโป้งบน iPhone) -->
+        <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#f4f7f6] via-[#f4f7f6]/95 to-transparent z-30 pointer-events-none">
+            <div class="max-w-md mx-auto pointer-events-auto">
+                <button onclick="openFormModal()" class="w-full bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-bold text-lg py-4 px-6 rounded-2xl shadow-xl shadow-brand-600/25 flex items-center justify-center gap-2.5 transition-all">
+                    <i class="ph-bold ph-plus-circle text-2xl"></i>
+                    <span>บันทึกเติมน้ำมัน</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal ฟอร์มเพิ่ม / แก้ไขข้อมูล -->
+    <div id="formModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex-col justify-end sm:justify-center items-center">
+        <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-slide-up max-h-[92vh] overflow-y-auto">
+            
+            <!-- หัวข้อ Modal -->
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <h3 id="modalTitle" class="text-xl font-bold text-slate-800">บันทึกเติมน้ำมัน</h3>
+                <button onclick="closeFormModal()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <!-- ข้อความแจ้งเตือน Error ในฟอร์ม -->
+            <div id="formError" class="hidden mt-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-sm flex items-center gap-2">
+                <i class="ph-fill ph-warning-circle text-lg shrink-0"></i>
+                <span id="formErrorText">กรุณากรอกข้อมูลให้ครบถ้วน</span>
+            </div>
+
+            <form id="fuelForm" onsubmit="handleSaveRecord(event)" class="mt-4 space-y-4">
+                <input type="hidden" id="recordId">
+
+                <!-- วันที่เติม -->
+                <div>
+                    <label for="inputDate" class="block text-sm font-semibold text-slate-700 mb-1.5">วันที่เติมน้ำมัน</label>
+                    <input type="date" id="inputDate" required
+                        class="w-full text-lg bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                </div>
+
+                <!-- เลขไมล์หน้าปัด -->
+                <div>
+                    <div class="flex justify-between items-baseline mb-1.5">
+                        <label for="inputOdometer" class="text-sm font-semibold text-slate-700">เลขไมล์ปัจจุบัน (กม.)</label>
+                        <span id="lastOdometerHint" class="text-xs text-brand-600 font-medium"></span>
+                    </div>
+                    <input type="number" id="inputOdometer" inputmode="numeric" step="1" placeholder="เช่น 45820" required
+                        class="w-full text-xl font-semibold bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3.5">
+                    <!-- จำนวนลิตร -->
+                    <div>
+                        <label for="inputLiters" class="block text-sm font-semibold text-slate-700 mb-1.5">จำนวนลิตร</label>
+                        <input type="number" id="inputLiters" inputmode="decimal" step="0.01" placeholder="เช่น 32.50" required
+                            class="w-full text-xl font-semibold bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                    </div>
+
+                    <!-- จำนวนเงิน (บาท) -->
+                    <div>
+                        <label for="inputCost" class="block text-sm font-semibold text-slate-700 mb-1.5">จำนวนเงิน (บาท)</label>
+                        <input type="number" id="inputCost" inputmode="decimal" step="0.01" placeholder="เช่น 1150" required
+                            class="w-full text-xl font-semibold bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                    </div>
+                </div>
+
+                <!-- แสดงราคาต่อลิตรอัตโนมัติขณะพิมพ์ -->
+                <div class="bg-slate-50 rounded-2xl px-4 py-2.5 flex justify-between items-center text-sm text-slate-500">
+                    <span>ราคาน้ำมันเฉลี่ย:</span>
+                    <span id="livePricePerLiter" class="font-semibold text-slate-700">- บาท/ลิตร</span>
+                </div>
+
+                <!-- ปุ่มบันทึก และปุ่มลบ (แสดงปุ่มลบเฉพาะตอนแก้ไข) -->
+                <div class="pt-3 flex gap-3">
+                    <button type="button" id="deleteBtn" onclick="confirmDeleteCurrent()" class="hidden px-4 py-3.5 rounded-2xl bg-rose-50 text-rose-600 font-semibold hover:bg-rose-100 active:scale-95 transition flex items-center justify-center">
+                        <i class="ph-bold ph-trash text-xl"></i>
+                    </button>
+                    <button type="submit" class="flex-1 bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-bold text-lg py-3.5 rounded-2xl shadow-lg shadow-brand-600/20 transition">
+                        บันทึกข้อมูล
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal ยืนยันการลบ หรือ รีเซ็ตข้อมูล (แทนการใช้ confirm() ของเบราว์เซอร์) -->
+    <div id="confirmModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-5">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
+            <div id="confirmIconBg" class="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
+                <i id="confirmIcon" class="ph-fill ph-trash text-3xl"></i>
+            </div>
+            <h3 id="confirmTitle" class="text-xl font-bold text-slate-800">ยืนยันการลบรายการ?</h3>
+            <p id="confirmMessage" class="text-slate-500 text-sm mt-2 leading-relaxed">ข้อมูลนี้จะถูกลบออกจากเครื่องและคำนวณสถิติใหม่ทันที</p>
+            <div class="mt-6 grid grid-cols-2 gap-3">
+                <button onclick="closeConfirmModal()" class="py-3 px-4 rounded-2xl bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 transition">
+                    ยกเลิก
+                </button>
+                <button id="confirmActionBtn" class="py-3 px-4 rounded-2xl bg-rose-600 text-white font-semibold hover:bg-rose-700 transition">
+                    ยืนยัน
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal ตั้งค่าเชื่อมต่อ Google Sheets -->
+    <div id="syncModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex-col justify-end sm:justify-center items-center">
+        <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-slide-up max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="ph-fill ph-microsoft-excel-logo text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-800">เชื่อมต่อ Google Sheets</h3>
+                </div>
+                <button onclick="closeSyncModal()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <div class="mt-4 space-y-4">
+                <!-- ช่องวาง URL -->
+                <div>
+                    <label for="sheetUrlInput" class="block text-sm font-semibold text-slate-700 mb-1.5">ลิงก์ Web App URL จาก Google Script</label>
+                    <input type="url" id="sheetUrlInput" placeholder="https://script.google.com/macros/s/.../exec"
+                        class="w-full text-sm bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                    <p class="text-xs text-slate-400 mt-1.5">หากปล่อยว่างไว้ ระบบจะบันทึกข้อมูลไว้ในเครื่องนี้ตามปกติ</p>
+                </div>
+
+                <!-- ปุ่มบันทึกและซิงค์ -->
+                <div class="flex gap-2.5">
+                    <button onclick="saveSheetUrl()" class="flex-1 bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-bold py-3 px-4 rounded-2xl shadow-md transition">
+                        บันทึกและดึงข้อมูล
+                    </button>
+                    <button id="pushLocalBtn" onclick="pushLocalToSheet()" class="hidden bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold py-3 px-4 rounded-2xl text-sm transition" title="ส่งข้อมูลในเครื่องขึ้น Google Sheet">
+                        ส่งข้อมูลขึ้นชีต
+                    </button>
+                </div>
+
+                <!-- คู่มือการตั้งค่าแบบย่อ -->
+                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200/70 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-bold text-slate-700">วิธีสร้างลิงก์เชื่อมต่อ (ทำครั้งเดียว)</span>
+                        <button onclick="copyAppsScriptCode()" class="text-xs bg-white border border-slate-200 hover:bg-slate-100 text-brand-700 font-semibold px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 active:scale-95 transition">
+                            <i class="ph-bold ph-copy"></i> คัดลอกโค้ดสคริปต์
+                        </button>
+                    </div>
+                    <ol class="text-xs text-slate-600 space-y-1.5 list-decimal list-inside leading-relaxed">
+                        <li>สร้างไฟล์ <strong>Google Sheets</strong> ใหม่ใน Google Drive</li>
+                        <li>กดเมนูด้านบน <strong>ส่วนขยาย (Extensions)</strong> &gt; <strong>Apps Script</strong></li>
+                        <li>ลบโค้ดเดิมออกทั้งหมด แล้วกด <strong>วางโค้ดที่คัดลอก</strong> ลงไป</li>
+                        <li>กดปุ่ม <strong>ทำให้ใช้งานได้ (Deploy)</strong> &gt; <strong>การทำให้ใช้งานได้รายการใหม่</strong></li>
+                        <li>เลือกประเภทเป็น <strong>เว็บแอป (Web app)</strong> และตั้งค่าผู้มีสิทธิ์เข้าถึงเป็น <strong>ทุกคน (Anyone)</strong></li>
+                        <li>กดยืนยันสิทธิ์ แล้วคัดลอก <strong>Web app URL</strong> มาวางในช่องด้านบน</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast แจ้งเตือนสั้นๆ ด้านบน -->
+    <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-5 py-3 rounded-full shadow-lg text-sm font-medium flex items-center gap-2 z-50 opacity-0 pointer-events-none transition-opacity duration-300 whitespace-nowrap">
+        <i id="toastIcon" class="ph-fill ph-check-circle text-emerald-400 text-lg"></i>
+        <span id="toastText">บันทึกเรียบร้อยแล้ว</span>
+    </div>
+
+    <script>
+        // คีย์สำหรับเก็บข้อมูลใน LocalStorage ของเครื่อง
+        const STORAGE_KEY = 'fuel_tracker_th_records_v1';
+        const SHEET_URL_KEY = 'fuel_tracker_th_sheet_url_v1';
+
+        // โค้ด Google Apps Script สำหรับให้ผู้ใช้คัดลอกไปวาง
+        const APPS_SCRIPT_TEMPLATE = `function doGet(e) {
+  var sheet = getOrCreateSheet();
+  var data = sheet.getDataRange().getValues();
+  var records = [];
+  for (var i = 1; i < data.length; i++) {
+    var rowDate = formatDateValue(data[i][1]);
+    if (data[i][0] && rowDate) {
+      records.push({
+        id: String(data[i][0]),
+        date: rowDate,
+        odometer: Number(data[i][2]) || 0,
+        liters: Number(data[i][3]) || 0,
+        cost: Number(data[i][4]) || 0
+      });
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({ status: 'ok', records: records }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var sheet = getOrCreateSheet();
+  var payload = JSON.parse(e.postData.contents);
+  
+  if (payload.action === 'syncAll') {
+    sheet.clearContents();
+    sheet.appendRow(['ID', 'วันที่', 'เลขไมล์ (กม.)', 'จำนวนลิตร', 'จำนวนเงิน (บาท)']);
+    var rows = payload.records.map(function(r) {
+      // ใส่เครื่องหมาย ' นำหน้าวันที่ เพื่อบังคับให้ Google Sheet เก็บเป็นข้อความ YYYY-MM-DD ไม่เพี้ยน
+      return [String(r.id), "'" + String(r.date), Number(r.odometer), Number(r.liters), Number(r.cost)];
+    });
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, 5).setValues(rows);
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getOrCreateSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('FuelLog');
+  if (!sheet) {
+    sheet = ss.insertSheet('FuelLog');
+    sheet.appendRow(['ID', 'วันที่', 'เลขไมล์ (กม.)', 'จำนวนลิตร', 'จำนวนเงิน (บาท)']);
+  }
+  return sheet;
+}
+
+function formatDateValue(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    var y = val.getFullYear();
+    if (y > 2400) y -= 543; // แปลง พ.ศ. เป็น ค.ศ. หากชีตตั้งค่าเป็นปีไทย
+    var m = ('0' + (val.getMonth() + 1)).slice(-2);
+    var d = ('0' + val.getDate()).slice(-2);
+    return y + '-' + m + '-' + d;
+  }
+  var str = String(val).trim().replace(/^'/, '');
+  // รองรับรูปแบบ DD/MM/YYYY หรือ D/M/YYYY
+  var slashMatch = str.match(/^(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4})/);
+  if (slashMatch) {
+    var d2 = ('0' + slashMatch[1]).slice(-2);
+    var m2 = ('0' + slashMatch[2]).slice(-2);
+    var y2 = parseInt(slashMatch[3], 10);
+    if (y2 > 2400) y2 -= 543;
+    return y2 + '-' + m2 + '-' + d2;
+  }
+  return str.substring(0, 10);
+}`;
+
+        // ตัวแปรเก็บรายการทั้งหมดและสถานะการยืนยัน
+        let records = [];
+        let pendingConfirmAction = null;
+
+        // ชื่อเดือนภาษาไทย
+        const THAI_MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const THAI_MONTHS_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+        /**
+         * สร้างข้อมูลตัวอย่าง 6 ครั้ง ในช่วง 2 เดือนที่ผ่านมา (อ้างอิงจากวันที่ปัจจุบันในเครื่อง)
+         */
+        function generateSampleData() {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            const currentDay = now.getDate();
+
+            const prevMonth1Date = new Date(currentYear, currentMonth - 1, 15);
+            const prevMonth2Date = new Date(currentYear, currentMonth - 2, 15);
+
+            const formatDateStr = (y, m, d) => {
+                return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            };
+
+            // สร้าง 6 รายการเรียงจากอดีตมาปัจจุบัน (กระจายใน 2 เดือนก่อน และเดือนปัจจุบัน)
+            const samples = [
+                {
+                    id: 'sample_1',
+                    date: formatDateStr(prevMonth2Date.getFullYear(), prevMonth2Date.getMonth(), 18),
+                    odometer: 42150,
+                    liters: 34.20,
+                    cost: 1210
+                },
+                {
+                    id: 'sample_2',
+                    date: formatDateStr(prevMonth1Date.getFullYear(), prevMonth1Date.getMonth(), 4),
+                    odometer: 42610, // วิ่ง 460 กม. -> ~13.45 กม./ลิตร
+                    liters: 34.20,
+                    cost: 1200
+                },
+                {
+                    id: 'sample_3',
+                    date: formatDateStr(prevMonth1Date.getFullYear(), prevMonth1Date.getMonth(), 15),
+                    odometer: 43105, // วิ่ง 495 กม. -> ~13.75 กม./ลิตร
+                    liters: 36.00,
+                    cost: 1260
+                },
+                {
+                    id: 'sample_4',
+                    date: formatDateStr(prevMonth1Date.getFullYear(), prevMonth1Date.getMonth(), 26),
+                    odometer: 43560, // วิ่ง 455 กม. -> ~13.91 กม./ลิตร
+                    liters: 32.70,
+                    cost: 1140
+                },
+                {
+                    id: 'sample_5',
+                    date: formatDateStr(currentYear, currentMonth, Math.max(1, Math.min(5, currentDay - 6))),
+                    odometer: 44045, // วิ่ง 485 กม. -> ~14.06 กม./ลิตร
+                    liters: 34.50,
+                    cost: 1190
+                },
+                {
+                    id: 'sample_6',
+                    date: formatDateStr(currentYear, currentMonth, Math.max(2, Math.min(18, currentDay))),
+                    odometer: 44510, // วิ่ง 465 กม. -> ~14.18 กม./ลิตร
+                    liters: 32.80,
+                    cost: 1130
+                }
+            ];
+
+            // กรณีที่วันที่ปัจจุบันเป็นต้นเดือนมากๆ (เช่น วันที่ 1-5) ปรับวันที่รายการที่ 5 ให้ย้อนไปปลายเดือนก่อน
+            if (currentDay <= 5) {
+                samples[4].date = formatDateStr(prevMonth1Date.getFullYear(), prevMonth1Date.getMonth(), 28);
+                samples[3].date = formatDateStr(prevMonth1Date.getFullYear(), prevMonth1Date.getMonth(), 20);
+                samples[2].date = formatDateStr(prevMonth1Date.getFullYear(), prevMonth1Date.getMonth(), 11);
+                samples[1].date = formatDateStr(prevMonth1Date.getFullYear(), prevMonth1Date.getMonth(), 2);
+            }
+
+            return samples;
+        }
+
+        /**
+         * โหลดข้อมูลจาก LocalStorage (หากไม่มีให้สร้างข้อมูลตัวอย่าง)
+         */
+        function loadData() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved !== null) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) {
+                        // กรองและแปลงรูปแบบวันที่ให้ถูกต้องเสมอ
+                        records = parsed.map(r => ({
+                            ...r,
+                            date: normalizeDateStr(r.date)
+                        })).filter(r => r.date);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error('Error reading localStorage:', e);
+            }
+            records = generateSampleData();
+            saveData(false);
+        }
+
+        /**
+         * แปลงวันที่ทุกรูปแบบให้เป็น YYYY-MM-DD ที่มาตรฐาน
+         */
+        function normalizeDateStr(val) {
+            if (!val) return '';
+            let str = String(val).trim().replace(/^'/, '');
+            // กรณีเป็น ISO String เช่น 2026-11-28T17:00:00.000Z
+            if (str.includes('T')) {
+                const dObj = new Date(str);
+                if (!isNaN(dObj.getTime())) {
+                    return `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
+                }
+            }
+            // กรณี DD/MM/YYYY
+            const slashMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+            if (slashMatch) {
+                let y = parseInt(slashMatch[3], 10);
+                if (y > 2400) y -= 543;
+                return `${y}-${slashMatch[2].padStart(2, '0')}-${slashMatch[1].padStart(2, '0')}`;
+            }
+            // กรณี YYYY-MM-DD
+            const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (isoMatch) {
+                let y = parseInt(isoMatch[1], 10);
+                if (y > 2400) y -= 543;
+                return `${y}-${isoMatch[2].padStart(2, '0')}-${isoMatch[3].padStart(2, '0')}`;
+            }
+            return '';
+        }
+
+        /**
+         * บันทึกข้อมูลลง LocalStorage และซิงค์ขึ้น Google Sheets (ถ้าเชื่อมต่อไว้)
+         */
+        function saveData(shouldSyncCloud = true) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+            } catch (e) {
+                console.error('Error saving to localStorage:', e);
+            }
+
+            if (shouldSyncCloud && getSheetUrl()) {
+                syncToGoogleSheet();
+            }
+        }
+
+        // ==========================================
+        // ระบบเชื่อมต่อและซิงค์ข้อมูลกับ Google Sheets
+        // ==========================================
+
+        function getSheetUrl() {
+            return localStorage.getItem(SHEET_URL_KEY) || '';
+        }
+
+        function updateSyncStatusUI(state) {
+            const badge = document.getElementById('syncStatusBadge');
+            const dot = document.getElementById('syncStatusDot');
+            const text = document.getElementById('syncStatusText');
+            const url = getSheetUrl();
+
+            if (!url) {
+                badge.className = 'cursor-pointer inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-600 transition';
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-slate-400';
+                text.textContent = 'ในเครื่อง';
+                return;
+            }
+
+            if (state === 'syncing') {
+                badge.className = 'cursor-pointer inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 transition';
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping';
+                text.textContent = 'กำลังซิงค์...';
+            } else if (state === 'error') {
+                badge.className = 'cursor-pointer inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 transition';
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-rose-500';
+                text.textContent = 'ซิงค์ไม่สำเร็จ';
+            } else {
+                badge.className = 'cursor-pointer inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 transition';
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
+                text.textContent = 'Google Sheet';
+            }
+        }
+
+        /**
+         * ดึงข้อมูลล่าสุดจาก Google Sheets มาแสดง
+         */
+        async function fetchFromGoogleSheet(showNotify = false) {
+            const url = getSheetUrl();
+            if (!url) return;
+
+            updateSyncStatusUI('syncing');
+            try {
+                // เพิ่ม timestamp ป้องกันเบราว์เซอร์จำค่าแคชเก่าตอนกด F5
+                const fetchUrl = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+                const res = await fetch(fetchUrl);
+                const data = await res.json();
+                if (data.status === 'ok' && Array.isArray(data.records)) {
+                    const cleanRecords = data.records
+                        .map(r => ({
+                            id: String(r.id || ('rec_' + Math.random())),
+                            date: normalizeDateStr(r.date),
+                            odometer: Number(r.odometer) || 0,
+                            liters: Number(r.liters) || 0,
+                            cost: Number(r.cost) || 0
+                        }))
+                        .filter(r => r.date && r.odometer > 0);
+
+                    if (cleanRecords.length > 0) {
+                        records = cleanRecords;
+                        saveData(false); // บันทึกลงเครื่องโดยไม่ยิงกลับขึ้นชีตซ้ำ
+                        renderApp();
+                        if (showNotify) showToast('ดึงข้อมูลจาก Google Sheet สำเร็จ');
+                    } else if (records.length > 0) {
+                        // ถ้าในชีตยังว่างเปล่า แต่ในเครื่องมีข้อมูล ให้ส่งข้อมูลขึ้นชีตอัตโนมัติ
+                        await syncToGoogleSheet();
+                        if (showNotify) showToast('ส่งข้อมูลเริ่มต้นขึ้น Google Sheet แล้ว');
+                    }
+                    updateSyncStatusUI('connected');
+                } else {
+                    throw new Error('Invalid response');
+                }
+            } catch (err) {
+                console.error('Fetch sheet error:', err);
+                updateSyncStatusUI('error');
+                if (showNotify) showToast('ไม่สามารถเชื่อมต่อ Google Sheet ได้ ตรวจสอบ URL อีกครั้ง', true);
+            }
+        }
+
+        /**
+         * ส่งข้อมูลทั้งหมดขึ้นไปอัปเดตใน Google Sheets
+         */
+        async function syncToGoogleSheet() {
+            const url = getSheetUrl();
+            if (!url) return;
+
+            updateSyncStatusUI('syncing');
+            try {
+                // ใช้ text/plain เพื่อหลีกเลี่ยง CORS Preflight บน Google Apps Script
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'syncAll',
+                        records: records
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    updateSyncStatusUI('connected');
+                } else {
+                    throw new Error('Sync failed');
+                }
+            } catch (err) {
+                console.error('Sync sheet error:', err);
+                updateSyncStatusUI('error');
+            }
+        }
+
+        function openSyncModal() {
+            const url = getSheetUrl();
+            document.getElementById('sheetUrlInput').value = url;
+            const pushBtn = document.getElementById('pushLocalBtn');
+            if (url) {
+                pushBtn.classList.remove('hidden');
+            } else {
+                pushBtn.classList.add('hidden');
+            }
+            const modal = document.getElementById('syncModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeSyncModal() {
+            const modal = document.getElementById('syncModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function saveSheetUrl() {
+            const inputUrl = document.getElementById('sheetUrlInput').value.trim();
+            if (!inputUrl) {
+                localStorage.removeItem(SHEET_URL_KEY);
+                updateSyncStatusUI('local');
+                closeSyncModal();
+                showToast('เปลี่ยนเป็นโหมดเก็บข้อมูลในเครื่องแล้ว');
+                return;
+            }
+
+            if (!inputUrl.startsWith('https://script.google.com/')) {
+                showToast('กรุณากรอกลิงก์ที่ขึ้นต้นด้วย https://script.google.com/', true);
+                return;
+            }
+
+            localStorage.setItem(SHEET_URL_KEY, inputUrl);
+            closeSyncModal();
+            await fetchFromGoogleSheet(true);
+        }
+
+        async function pushLocalToSheet() {
+            closeSyncModal();
+            showToast('กำลังส่งข้อมูลขึ้น Google Sheet...');
+            await syncToGoogleSheet();
+            showToast('อัปเดตข้อมูลขึ้น Google Sheet เรียบร้อย');
+        }
+
+        function copyAppsScriptCode() {
+            const textarea = document.createElement('textarea');
+            textarea.value = APPS_SCRIPT_TEMPLATE;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('คัดลอกโค้ด Apps Script แล้ว!');
+        }
+
+        /**
+         * จัดรูปแบบวันที่เป็นภาษาไทย เช่น "15 พ.ย. 69"
+         */
+        function formatThaiDate(dateStr) {
+            const clean = normalizeDateStr(dateStr);
+            if (!clean) return 'ไม่ระบุวันที่';
+            const [y, m, d] = clean.split('-').map(Number);
+            if (!y || !m || !d || !THAI_MONTHS_SHORT[m - 1]) return clean;
+            const thaiYearShort = String((y + 543) % 100).padStart(2, '0');
+            return `${d} ${THAI_MONTHS_SHORT[m - 1]} ${thaiYearShort}`;
+        }
+
+        /**
+         * จัดรูปแบบตัวเลขทศนิยมและลูกน้ำ
+         */
+        function formatNumber(num, decimals = 0) {
+            return Number(num).toLocaleString('th-TH', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+
+        /**
+         * คำนวณสถิติของแต่ละรายการ (ระยะทาง, กม./ลิตร, บาท/กม.)
+         * โดยเรียงจากเก่าไปใหม่ก่อนเพื่อให้เทียบเลขไมล์กับครั้งก่อนหน้าได้ถูกต้อง
+         */
+        function getEnrichedRecords() {
+            // เรียงลำดับตามวันที่ และเลขไมล์ จากน้อยไปมาก (เก่า -> ใหม่)
+            const sortedAsc = [...records].sort((a, b) => {
+                if (a.date !== b.date) return a.date.localeCompare(b.date);
+                return a.odometer - b.odometer;
+            });
+
+            const enriched = sortedAsc.map((item, index) => {
+                let distance = null;
+                let kmPerLiter = null;
+                let bahtPerKm = null;
+                const pricePerLiter = item.liters > 0 ? item.cost / item.liters : 0;
+
+                if (index > 0) {
+                    const prev = sortedAsc[index - 1];
+                    const diff = item.odometer - prev.odometer;
+                    if (diff > 0) {
+                        distance = diff;
+                        kmPerLiter = item.liters > 0 ? distance / item.liters : null;
+                        bahtPerKm = distance > 0 ? item.cost / distance : null;
+                    }
+                }
+
+                return {
+                    ...item,
+                    distance,
+                    kmPerLiter,
+                    bahtPerKm,
+                    pricePerLiter
+                };
+            });
+
+            // ส่งกลับโดยเรียงจากใหม่ไปเก่า (ล่าสุดอยู่บนสุด)
+            return enriched.reverse();
+        }
+
+        /**
+         * อัปเดตการแสดงผลทั้งหมดบนหน้าจอ
+         */
+        function renderApp() {
+            const enrichedRecords = getEnrichedRecords();
+            const now = new Date();
+            const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            
+            const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const prevMonthKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+            // แสดงชื่อเดือนปัจจุบันที่ Header
+            const thaiYearFull = now.getFullYear() + 543;
+            document.getElementById('currentMonthLabel').textContent = `เดือน${THAI_MONTHS_FULL[now.getMonth()]} ${thaiYearFull}`;
+
+            // --- 1. คำนวณยอดเดือนนี้ เทียบกับเดือนก่อน ---
+            const thisMonthRecords = enrichedRecords.filter(r => r.date.startsWith(currentMonthKey));
+            const prevMonthRecords = enrichedRecords.filter(r => r.date.startsWith(prevMonthKey));
+
+            const thisMonthTotal = thisMonthRecords.reduce((sum, r) => sum + Number(r.cost), 0);
+            const prevMonthTotal = prevMonthRecords.reduce((sum, r) => sum + Number(r.cost), 0);
+
+            document.getElementById('thisMonthTotal').textContent = formatNumber(thisMonthTotal, 0);
+            document.getElementById('fillCountBadge').textContent = `เติม ${thisMonthRecords.length} ครั้ง`;
+
+            const comparisonIcon = document.getElementById('comparisonIcon');
+            const comparisonText = document.getElementById('comparisonText');
+
+            if (prevMonthTotal === 0 && thisMonthTotal === 0) {
+                comparisonIcon.innerHTML = '<i class="ph-bold ph-minus"></i>';
+                comparisonIcon.className = 'w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0';
+                comparisonText.textContent = 'ยังไม่มีข้อมูลเปรียบเทียบกับเดือนก่อน';
+            } else if (prevMonthTotal === 0) {
+                comparisonIcon.innerHTML = '<i class="ph-bold ph-sparkle"></i>';
+                comparisonIcon.className = 'w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0';
+                comparisonText.textContent = 'เดือนก่อนไม่มีรายการบันทึกค่าน้ำมัน';
+            } else {
+                const diff = thisMonthTotal - prevMonthTotal;
+                const absDiff = Math.abs(diff);
+                const percent = Math.round((absDiff / prevMonthTotal) * 100);
+
+                if (diff > 0) {
+                    comparisonIcon.innerHTML = '<i class="ph-bold ph-trend-up text-amber-300"></i>';
+                    comparisonIcon.className = 'w-6 h-6 rounded-full bg-amber-500/30 flex items-center justify-center shrink-0';
+                    comparisonText.innerHTML = `มากกว่าเดือนก่อน <strong class="text-white font-semibold">${formatNumber(absDiff)} บาท</strong> (+${percent}%)`;
+                } else if (diff < 0) {
+                    comparisonIcon.innerHTML = '<i class="ph-bold ph-trend-down text-emerald-300"></i>';
+                    comparisonIcon.className = 'w-6 h-6 rounded-full bg-emerald-400/30 flex items-center justify-center shrink-0';
+                    comparisonText.innerHTML = `น้อยกว่าเดือนก่อน <strong class="text-white font-semibold">${formatNumber(absDiff)} บาท</strong> (-${percent}%)`;
+                } else {
+                    comparisonIcon.innerHTML = '<i class="ph-bold ph-equals"></i>';
+                    comparisonIcon.className = 'w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0';
+                    comparisonText.textContent = 'เท่ากับเดือนก่อนพอดี';
+                }
+            }
+
+            // --- 2. คำนวณค่าเฉลี่ยรวมทั้งหมด และสร้างกราฟแท่งรายเดือน ---
+            const validKmLRecords = enrichedRecords.filter(r => r.kmPerLiter !== null && r.kmPerLiter > 0);
+            const totalDistance = validKmLRecords.reduce((sum, r) => sum + r.distance, 0);
+            const totalLitersForDist = validKmLRecords.reduce((sum, r) => sum + Number(r.liters), 0);
+            const overallAvgKmL = totalLitersForDist > 0 ? (totalDistance / totalLitersForDist) : 0;
+
+            document.getElementById('overallAvgKmL').textContent = overallAvgKmL > 0 
+                ? `${formatNumber(overallAvgKmL, 2)} กม./ลิตร` 
+                : '- กม./ลิตร';
+
+            renderMonthlyChart(enrichedRecords);
+
+            // --- 3. แสดงรายการประวัติการเติมน้ำมัน ---
+            renderRecordsList(enrichedRecords);
+        }
+
+        /**
+         * วาดกราฟแท่งเปรียบเทียบค่าน้ำมันและอัตราสิ้นเปลืองแต่ละเดือน
+         */
+        function renderMonthlyChart(enrichedRecords) {
+            const container = document.getElementById('monthlyChartContainer');
+            if (enrichedRecords.length === 0) {
+                container.innerHTML = '<p class="text-center text-slate-400 text-sm py-4">ยังไม่มีข้อมูลสำหรับแสดงกราฟ</p>';
+                return;
+            }
+
+            // จัดกลุ่มตามเดือน (YYYY-MM)
+            const monthGroups = {};
+            enrichedRecords.forEach(r => {
+                const mKey = r.date.substring(0, 7);
+                if (!monthGroups[mKey]) {
+                    monthGroups[mKey] = {
+                        key: mKey,
+                        totalCost: 0,
+                        distance: 0,
+                        litersForDist: 0,
+                        count: 0
+                    };
+                }
+                monthGroups[mKey].totalCost += Number(r.cost);
+                monthGroups[mKey].count += 1;
+                if (r.distance !== null && r.distance > 0) {
+                    monthGroups[mKey].distance += r.distance;
+                    monthGroups[mKey].litersForDist += Number(r.liters);
+                }
+            });
+
+            // เรียงเดือนจากล่าสุดไปเก่าสุด (แสดงสูงสุด 6 เดือนล่าสุด)
+            const sortedMonths = Object.values(monthGroups)
+                .sort((a, b) => b.key.localeCompare(a.key))
+                .slice(0, 6);
+
+            const maxCost = Math.max(...sortedMonths.map(m => m.totalCost), 1);
+
+            container.innerHTML = sortedMonths.map((m, idx) => {
+                const [y, monthNum] = m.key.split('-').map(Number);
+                const monthLabel = `${THAI_MONTHS_FULL[monthNum - 1]} ${String((y + 543) % 100)}`;
+                const widthPercent = Math.max(8, Math.round((m.totalCost / maxCost) * 100));
+                const avgKmL = m.litersForDist > 0 ? (m.distance / m.litersForDist) : null;
+                const isCurrent = idx === 0;
+
+                return `
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-baseline text-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-slate-700">${monthLabel}</span>
+                                <span class="text-xs text-slate-400">(${m.count} ครั้ง)</span>
+                            </div>
+                            <div class="text-right flex items-center gap-2.5">
+                                ${avgKmL ? `<span class="text-xs font-medium px-2 py-0.5 rounded-md bg-teal-50 text-teal-700">${formatNumber(avgKmL, 1)} กม./ล.</span>` : ''}
+                                <span class="font-bold text-slate-800">${formatNumber(m.totalCost)} ฿</span>
+                            </div>
+                        </div>
+                        <div class="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-500 ${isCurrent ? 'bg-brand-500' : 'bg-slate-300'}" 
+                                 style="width: ${widthPercent}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * แสดงรายการประวัติการเติมน้ำมันแต่ละครั้ง
+         */
+        function renderRecordsList(enrichedRecords) {
+            const listEl = document.getElementById('recordsList');
+
+            if (enrichedRecords.length === 0) {
+                listEl.innerHTML = `
+                    <div class="bg-white rounded-3xl p-8 text-center border border-slate-100">
+                        <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                            <i class="ph-duotone ph-gas-pump text-3xl"></i>
+                        </div>
+                        <p class="text-slate-600 font-semibold text-base">ยังไม่มีประวัติการเติมน้ำมัน</p>
+                        <p class="text-slate-400 text-sm mt-1">กดปุ่ม "บันทึกเติมน้ำมัน" ด้านล่างเพื่อเริ่มต้น</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = enrichedRecords.map(item => {
+                const hasStats = item.distance !== null && item.distance > 0;
+
+                return `
+                    <div onclick="openFormModal('${item.id}')" class="bg-white rounded-3xl p-4.5 p-5 shadow-xs border border-slate-100 active:scale-[0.99] transition cursor-pointer hover:border-brand-200">
+                        <!-- แถวบน: วันที่, เลขไมล์ และยอดเงิน -->
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-slate-800 text-base">${formatThaiDate(item.date)}</span>
+                                    <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                                        ไมล์ ${formatNumber(item.odometer)} กม.
+                                    </span>
+                                </div>
+                                <p class="text-sm text-slate-500 mt-1">
+                                    เติม <strong class="text-slate-700 font-semibold">${formatNumber(item.liters, 2)}</strong> ลิตร 
+                                    <span class="text-slate-300 mx-1">•</span> 
+                                    ${formatNumber(item.pricePerLiter, 2)} บ./ลิตร
+                                </p>
+                            </div>
+
+                            <div class="text-right">
+                                <span class="text-xl font-bold text-slate-900 block">${formatNumber(item.cost)} ฿</span>
+                                <span class="text-xs text-brand-600 font-medium inline-flex items-center gap-0.5 mt-0.5">
+                                    <i class="ph ph-pencil-simple"></i> แก้ไข
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- แถวล่าง: กล่องแสดงผลคำนวณอัตโนมัติ (วิ่งได้กี่กิโล / กม.ต่อลิตร / บาทต่อกิโล) -->
+                        ${hasStats ? `
+                            <div class="mt-3.5 pt-3 border-t border-slate-100 grid grid-cols-3 gap-2 text-center bg-slate-50/80 rounded-2xl p-2.5">
+                                <div>
+                                    <span class="text-[11px] text-slate-400 block">วิ่งได้ระยะทาง</span>
+                                    <span class="text-sm font-bold text-slate-700">${formatNumber(item.distance)} กม.</span>
+                                </div>
+                                <div class="border-x border-slate-200/70">
+                                    <span class="text-[11px] text-slate-400 block">อัตราประหยัด</span>
+                                    <span class="text-sm font-bold text-brand-600">${formatNumber(item.kmPerLiter, 2)} กม./ล.</span>
+                                </div>
+                                <div>
+                                    <span class="text-[11px] text-slate-400 block">เฉลี่ยกิโลละ</span>
+                                    <span class="text-sm font-bold text-amber-600">${formatNumber(item.bahtPerKm, 2)} บาท</span>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="mt-3 pt-2.5 border-t border-slate-100 text-xs text-slate-400 flex items-center gap-1.5">
+                                <i class="ph ph-info"></i>
+                                <span>จุดเริ่มต้นเลขไมล์ (ครั้งถัดไปจะคำนวณระยะทางและอัตราสิ้นเปลืองให้อัตโนมัติ)</span>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==========================================
+        // การจัดการ Modal เพิ่ม / แก้ไขข้อมูล
+        // ==========================================
+
+        function openFormModal(id = null) {
+            const modal = document.getElementById('formModal');
+            const title = document.getElementById('modalTitle');
+            const deleteBtn = document.getElementById('deleteBtn');
+            const errorBox = document.getElementById('formError');
+            const hintEl = document.getElementById('lastOdometerHint');
+
+            errorBox.classList.add('hidden');
+
+            // หาเลขไมล์ล่าสุดเพื่อแสดงเป็นคำแนะนำ
+            const sortedByOdo = [...records].sort((a, b) => b.odometer - a.odometer);
+            const maxOdo = sortedByOdo.length > 0 ? sortedByOdo[0].odometer : null;
+
+            if (id) {
+                // โหมดแก้ไข
+                const record = records.find(r => r.id === id);
+                if (!record) return;
+
+                title.textContent = 'แก้ไขข้อมูลเติมน้ำมัน';
+                document.getElementById('recordId').value = record.id;
+                document.getElementById('inputDate').value = record.date;
+                document.getElementById('inputOdometer').value = record.odometer;
+                document.getElementById('inputLiters').value = record.liters;
+                document.getElementById('inputCost').value = record.cost;
+                
+                deleteBtn.classList.remove('hidden');
+                hintEl.textContent = '';
+            } else {
+                // โหมดเพิ่มใหม่
+                title.textContent = 'บันทึกเติมน้ำมัน';
+                document.getElementById('recordId').value = '';
+                
+                // ตั้งค่าวันที่เริ่มต้นเป็นวันนี้ตามเวลาเครื่อง
+                const now = new Date();
+                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                document.getElementById('inputDate').value = todayStr;
+                
+                document.getElementById('inputOdometer').value = '';
+                document.getElementById('inputLiters').value = '';
+                document.getElementById('inputCost').value = '';
+                
+                deleteBtn.classList.add('hidden');
+                hintEl.textContent = maxOdo ? `ครั้งล่าสุด: ${formatNumber(maxOdo)} กม.` : '';
+            }
+
+            updateLivePricePerLiter();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeFormModal() {
+            const modal = document.getElementById('formModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // คำนวณราคาต่อลิตรแบบเรียลไทม์ขณะผู้ใช้กรอกลิตรและจำนวนเงิน
+        function updateLivePricePerLiter() {
+            const liters = parseFloat(document.getElementById('inputLiters').value);
+            const cost = parseFloat(document.getElementById('inputCost').value);
+            const display = document.getElementById('livePricePerLiter');
+
+            if (liters > 0 && cost > 0) {
+                display.textContent = `${formatNumber(cost / liters, 2)} บาท/ลิตร`;
+            } else {
+                display.textContent = '- บาท/ลิตร';
+            }
+        }
+
+        document.getElementById('inputLiters').addEventListener('input', updateLivePricePerLiter);
+        document.getElementById('inputCost').addEventListener('input', updateLivePricePerLiter);
+
+        /**
+         * บันทึกข้อมูล (ทั้งเพิ่มใหม่และแก้ไข)
+         */
+        function handleSaveRecord(e) {
             e.preventDefault();
 
-            const newLog = {
-                id: Date.now(),
-                date: document.getElementById('date').value,
-                odometer: parseFloat(document.getElementById('odometer').value),
-                station: document.getElementById('station').value,
-                fuelType: document.getElementById('fuelType').value,
+            const id = document.getElementById('recordId').value;
+            const date = document.getElementById('inputDate').value;
+            const odometer = parseFloat(document.getElementById('inputOdometer').value);
+            const liters = parseFloat(document.getElementById('inputLiters').value);
+            const cost = parseFloat(document.getElementById('inputCost').value);
+
+            const errorBox = document.getElementById('formError');
+            const errorText = document.getElementById('formErrorText');
+
+            if (!date || isNaN(odometer) || isNaN(liters) || isNaN(cost) || odometer <= 0 || liters <= 0 || cost <= 0) {
+                errorText.textContent = 'กรุณากรอกตัวเลขให้ถูกต้องและมากกว่า 0';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            if (id) {
+                // อัปเดตรายการเดิม
+                const index = records.findIndex(r => r.id === id);
+                if (index !== -1) {
+                    records[index] = { id, date, odometer, liters, cost };
+                }
+                showToast('อัปเดตข้อมูลเรียบร้อยแล้ว');
+            } else {
+                // เพิ่มรายการใหม่
+                const newRecord = {
+                    id: 'rec_' + Date.now(),
+                    date,
+                    odometer,
+                    liters,
+                    cost
+                };
+                records.push(newRecord);
+                showToast('บันทึกการเติมน้ำมันแล้ว');
+            }
+
+            saveData();
+            renderApp();
+            closeFormModal();
+        }
+
+        // ==========================================
+        // การจัดการลบ และ รีเซ็ตข้อมูล (Custom Confirm Modal)
+        // ==========================================
+
+        function confirmDeleteCurrent() {
+            const id = document.getElementById('recordId').value;
+            if (!id) return;
+
+            openConfirmModal({
+                title: 'ลบรายการนี้ใช่ไหม?',
+                message: 'เมื่อลบแล้ว ระบบจะคำนวณระยะทางและอัตราสิ้นเปลืองใหม่ให้อัตโนมัติ',
+                iconClass: 'ph-fill ph-trash text-3xl',
+                iconBgClass: 'w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4',
+                btnClass: 'py-3 px-4 rounded-2xl bg-rose-600 text-white font-semibold hover:bg-rose-700 transition',
+                btnText: 'ลบรายการ',
+                onConfirm: () => {
+                    records = records.filter(r => r.id !== id);
+                    saveData();
+                    renderApp();
+                    closeFormModal();
+                    showToast('ลบรายการเรียบร้อยแล้ว');
+                }
+            });
+        }
+
+        function openResetModal() {
+            openConfirmModal({
+                title: 'คืนค่าข้อมูลตัวอย่าง?',
+                message: 'ข้อมูลที่บันทึกไว้จะถูกแทนที่ด้วยรายการตัวอย่าง 6 ครั้งในช่วง 2 เดือนที่ผ่านมา',
+                iconClass: 'ph-fill ph-arrows-clockwise text-3xl',
+                iconBgClass: 'w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4',
+                btnClass: 'py-3 px-4 rounded-2xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition',
+                btnText: 'คืนค่าตัวอย่าง',
+                onConfirm: () => {
+                    records = generateSampleData();
+                    saveData();
+                    renderApp();
+                    showToast('โหลดข้อมูลตัวอย่างเรียบร้อย');
+                }
+            });
+        }
+
+        function openConfirmModal({ title, message, iconClass, iconBgClass, btnClass, btnText, onConfirm }) {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmMessage').textContent = message;
+            document.getElementById('confirmIcon').className = iconClass;
+            document.getElementById('confirmIconBg').className = iconBgClass;
+            
+            const actionBtn = document.getElementById('confirmActionBtn');
+            actionBtn.className = btnClass;
+            actionBtn.textContent = btnText;
+
+            pendingConfirmAction = onConfirm;
+
+            const modal = document.getElementById('confirmModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            pendingConfirmAction = null;
+        }
+
+        document.getElementById('confirmActionBtn').addEventListener('click', () => {
+            if (typeof pendingConfirmAction === 'function') {
+                pendingConfirmAction();
+            }
+            closeConfirmModal();
+        });
+
+        // แสดง Toast แจ้งเตือนสั้นๆ
+        let toastTimeout;
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            document.getElementById('toastText').textContent = message;
+            
+            icon.className = isError 
+                ? 'ph-fill ph-warning-circle text-rose-400 text-lg' 
+                : 'ph-fill ph-check-circle text-emerald-400 text-lg';
+
+            toast.classList.remove('opacity-0');
+            
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('opacity-0');
+            }, 3000);
+        }
+
+        // ปิด Modal เมื่อแตะพื้นที่ด้านนอก
+        document.getElementById('formModal').addEventListener('click', (e) => {
+            if (e.target.id === 'formModal') closeFormModal();
+        });
+        document.getElementById('confirmModal').addEventListener('click', (e) => {
+            if (e.target.id === 'confirmModal') closeConfirmModal();
+        });
+        document.getElementById('syncModal').addEventListener('click', (e) => {
+            if (e.target.id === 'syncModal') closeSyncModal();
+        });
+
+        // เริ่มต้นทำงานเมื่อโหลดหน้าเว็บเสร็จ
+        window.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            renderApp();
+            updateSyncStatusUI();
+            if (getSheetUrl()) {
+                fetchFromGoogleSheet(false);
+            }
+        });
+    </script>
+</body>
+</html>
